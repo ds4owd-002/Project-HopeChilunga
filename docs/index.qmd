@@ -1,0 +1,20 @@
+---
+title: "index"
+format: html
+---
+
+## Project Description
+
+The analysis aims to evaluate the accuracy and stability of the drone’s sensors (accelerometer, gyroscope, and magnetometer), assess flight dynamics under various simulated conditions, and improve sensor calibration and fusion algorithms. It also seeks to refine flight control performance and develop machine learning models to enhance data accuracy and compensate for limitations in smartphone-based IMUs.
+```{r}
+library(tidyverse)
+
+read_csv(here::here("data/raw/imu.csv"))
+```
+
+
+
+
+
+
+
