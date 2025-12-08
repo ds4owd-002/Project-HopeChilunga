@@ -10,9 +10,53 @@ The analysis aims to evaluate the accuracy and stability of the drone’s sensor
 library(tidyverse)
 
 read_csv(here::here("data/raw/imu.csv"))
+
+imu <- read_csv(here::here("data/raw/imu.csv"))
 ```
 
 
+```{r}
+# 2. CLEAN & PREPARE DATA
+imu_clean <- imu %>%
+  # Rename columns to clean, analysis-friendly names
+  rename(
+    time_ns = `time [ns]`,
+    ax = `ax [m s-2]`,
+    ay = `ay [m s-2]`,
+    az = `az [m s-2]`,
+    p  = `p [rad/s]`,
+    q  = `q [rad/s]`,
+    r  = `r [rad/s]`
+  ) %>%
+  
+  # Select variables you want to keep
+  select(time_ns, ax, ay, az, p, q, r) %>%
+  
+  # Remove missing values
+  drop_na() %>%
+  
+  # Create useful new variables
+  mutate(
+    # Convert time from nanoseconds to seconds
+    time_s = time_ns / 1e9,
+    
+    # Magnitude of total acceleration
+    accel_total = sqrt(ax^2 + ay^2 + az^2),
+    
+    # Magnitude of total angular velocity
+    gyro_total  = sqrt(p^2 + q^2 + r^2)
+  )
+
+```
+```{r}
+# 3. OUTPUT CLEANED DATA
+imu_clean
+write_csv(imu_clean,
+          here::here("data/my-processed-data.csv"))
+
+```
+
+  
 
 
 
