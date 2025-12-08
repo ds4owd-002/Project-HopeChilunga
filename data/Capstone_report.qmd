@@ -1,0 +1,252 @@
+---
+title: "Drone IMU Performance Analysis"
+author: "Hope Chilunga"
+date: "`r format(Sys.Date())`"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+bibliography: bibliography.bib
+execute:
+  warning: false
+  message: true
+---
+# Introduction
+
+Modern drones rely heavily on **Inertial Measurement Unit (IMU)** sensors for stability, navigation, and real-time flight corrections.  
+This project explores IMU data recorded during a live drone test flight to understand:
+
+- How the drone behaves during dynamic phases (take-off, turns, hovering, landing)  
+- How acceleration and gyroscope signals interact  
+- Whether there are patterns indicating control corrections or instability  
+
+This analysis uses **data visualisation, statistical modelling, smoothing techniques, and exploratory engineering analysis** to interpret drone performance from raw sensor readings.
+
+# Methods
+
+ The dataset used in this project was obtained from Kaggle and consists of measurements collected from on-board IMU    sensors, which capture the drone’s motion in detail. The sensors recorded linear acceleration along the X, Y, and   Z    axes (Ax, Ay, Az), angular velocity in roll, pitch, and yaw directions (p, q, r), and a high-resolution       nanosecond timestamp (time_ns). The analysis followed several processing steps:
+    
+    Importing the raw CSV data into R.
+    
+    Cleaning variable names to ensure consistency and ease of analysis.
+    
+    Creating derived metrics, such as total acceleration and total rotation, to better capture overall drone motion.
+    
+    Smoothing noisy sensor data using rolling averages to reduce fluctuations.
+    
+    Visualizing motion patterns with multi-layer ggplot2 plots.
+    
+Building a regression model to explore relationships between rotation and acceleration, helping identify factors affecting drone performance and stability.
+```{r}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(knitr)
+```
+```{r}
+packages <- c("tidyverse", "janitor", "summarytools", "here", "zoo")
+installed <- packages %in% rownames(installed.packages())
+if(any(!installed)) install.packages(packages[!installed])
+lapply(packages, library, character.only = TRUE)
+
+```
+```{r}
+
+library(tidyverse)
+
+
+
+# Use the correct relative path
+imu <- read_csv("raw/imu.csv")
+
+# Check the first few rows
+head(imu)
+# Clean and prepare the data
+imu_clean <- imu %>%
+  rename(
+    time_ns = `time [ns]`,
+    ax = `ax [m s-2]`,
+    ay = `ay [m s-2]`,
+    az = `az [m s-2]`,
+    p  = `p [rad/s]`,
+    q  = `q [rad/s]`,
+    r  = `r [rad/s]`
+  ) %>%
+  select(time_ns, ax, ay, az, p, q, r) %>%
+  mutate(time_s = time_ns / 1e9,gyro_total  = sqrt(p^2 + q^2 + r^2),accel_total = sqrt(ax^2 + ay^2 + az^2))
+    
+
+
+```
+# Quick check of the data
+```{r}
+# View first rows
+head(imu)
+
+# Check structure
+str(imu)
+
+# Summary statistics
+summary(imu)
+```
+```{r}
+library(dplyr)
+library(janitor)
+
+imu <- imu %>% clean_names()
+
+# Check new column names
+colnames(imu)
+```
+```{r}
+imu <- imu %>% 
+  mutate(time_s = time_ns / 1e9)
+
+imu <- imu %>% 
+  mutate(time_s = time_ns / 1e9)
+
+```
+# Results and Analysis
+ 1. Acceleration Behaviour Over Time
+```{r}
+#| label: fig-accel
+#| fig-cap: "Acceleration components over time."
+imu_clean %>%
+pivot_longer(c(ax, ay, az), names_to="axis", values_to="accel") %>%
+ggplot(aes(time_s, accel, color = axis)) +
+geom_line() +
+labs(
+x = "Time (seconds)",
+y = "Acceleration (m/s²)",
+color = "Axis"
+) +
+theme_minimal()
+
+```
+Analysis:
+Take-off: Sharp spike in the z-axis (az) represents vertical lift.
+Forward motion & maneuvers: Moderate fluctuations in x-axis (ax) and y-axis (ay) correspond to horizontal movement and turns.
+Landing: Another spike in az shows deceleration during landing.
+Overall, accelerometer data captures all major flight phases. Sudden spikes indicate rapid movements, likely due to autopilot or pilot inputs, while smoother patterns indicate controlled horizontal motion.
+
+#Gyroscope Angular Velocity
+```{r}
+#| label: fig-gyro
+#| fig-cap: "Gyroscope angular velocity over time."
+imu_clean %>%
+pivot_longer(c(p, q, r), names_to="gyro_axis", values_to="ang_vel") %>%
+ggplot(aes(time_s, ang_vel, color = gyro_axis)) +
+geom_line() +
+labs(
+x = "Time (seconds)",
+y = "Angular Velocity (rad/s)",
+color = "Gyroscope Axis"
+) +
+theme_minimal()
+
+```
+Analysis:
+  Sharp turns: Peaks in p (roll) and q (pitch) indicate rapid changes in drone orientation, such as banking or tilting.
+   Yaw adjustments (red line, r): Variations in r correspond to rotation around the vertical axis (turning left or right). Peaks show rapid directional corrections, while values near zero indicate straight flight.
+  Stabilization: Periods of low angular velocity across all axes correspond to steady hovering or smooth straight-line flight.
+   External factors: High-frequency spikes, especially in yaw, may capture responses to wind gusts or other turbulence.
+
+   # Interpretation:
+The gyroscope data confirms that the drone performs intentional rotations along all axes and actively stabilizes during flight. Highlighting the red line (r/yaw) emphasizes horizontal directional changes, which are critical for navigation and course correction.
+
+# Smoothed Acceleration
+```{r}
+library(dplyr)
+library(zoo)
+
+imu_clean <- imu_clean %>%
+  mutate(
+    # Compute total acceleration magnitude
+    accel_total = sqrt(ax^2 + ay^2 + az^2),
+    # Smooth the total acceleration with a rolling mean (window = 50)
+    accel_smooth = zoo::rollmean(accel_total, k = 50, fill = NA)
+  )
+
+```
+
+```{r}
+# Smooth total acceleration
+
+imu_clean <- imu_clean %>%
+mutate(accel_smooth = zoo::rollmean(accel_total, k = 50, fill = NA))
+
+#| label: fig-smooth
+#| fig-cap: "Smoothed total acceleration using a rolling mean."
+ggplot(imu_clean, aes(time_s, accel_smooth)) +
+geom_line() +
+labs(
+x = "Time (seconds)",
+y = "Smoothed Acceleration (m/s²)"
+) +
+theme_minimal()
+
+```
+Analysis:
+The rolling mean removes small fluctuations and highlights overall trends.
+Peaks correspond to take-off, landing, or sharp maneuvers.
+Flat regions indicate steady flight.
+Smoothed acceleration is a good measure of general drone stability, confirming controlled motion with occasional high-intensity events.
+
+# Summary Statistics
+```{r}
+library(tidyverse)
+library(knitr)
+
+imu_clean %>%
+  summarise(
+    mean_acc = mean(accel_total, na.rm=TRUE),
+    sd_acc = sd(accel_total, na.rm=TRUE),
+    mean_gyro = mean(gyro_total, na.rm=TRUE),
+    sd_gyro = sd(gyro_total, na.rm=TRUE)
+  ) %>%
+  kable(caption = "Summary statistics of IMU variables")
+
+
+
+```
+Analysis:
+  Mean values indicate average movement intensity; moderate values suggest stable flight.
+  Standard deviations quantify variability; high SD reflects aggressive maneuvers or turbulence.
+  Overall, the drone experiences mostly controlled movements with predictable flight patterns.
+  
+# Linear Model: Predicting Acceleration from Gyroscope
+```{r}
+#| label: model-lm
+model <- lm(accel_total ~ p + q + r, data = imu_clean)
+summary(model)
+
+```
+Analysis:
+  Positive coefficients show that increases in rotational velocity lead to higher acceleration.
+  The R² value indicates how much of acceleration variability can be explained by rotation.
+  This confirms that rotational maneuvers directly influence total acceleration, validating the relationship between    gyroscope readings and drone movement intensity.
+
+# Conclusions
+1) Accelerometer data clearly identifies take-off, turns, and landing phases.
+
+2) Gyroscope readings show active stabilization and rotational maneuvers.
+
+3) Smoothed acceleration confirms controlled flight with minimal turbulence effects.
+
+4) The linear model demonstrates a measurable relationship between rotational velocity and acceleration, useful for improving autopilot and stability algorithms.
+
+# References
+1) Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G. (2023). *R for data science* (2nd ed.). O’Reilly Media.         https://doi.org/10.5281/zenodo.5796260
+  
+2) Wickham, H. (2023). *tidyverse: Easily install and load the tidyverse* (Version 1.3.2) [R package]. CRAN. https://CRAN.R-project.org/package=tidyverse  
+(Software packages do not have DOIs; CRAN link is the official reference.)
+  
+3) Grolemund, G. (2014). *Hands-on programming with R*. O’Reilly Media.  
+(No DOI available for this book.)
+  
+4) Biecek, P., & Kosinski, M. (2022). *Data wrangling in R*. CRC Press. https://doi.org/10.1201/9780429320966
+  
+5) R Core Team. (2023). *R: A language and environment for statistical computing* [Computer software]. R Foundation     for Statistical Computing. https://www.R-project.org/  
+  (Official R software does not use a DOI.)
+

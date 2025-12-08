@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.24">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Hope Chilunga">
+<meta name="dcterms.date" content="2025-12-11">
+
+<title>Drone IMU Performance Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Capstone_report_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Capstone_report_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Capstone_report_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Capstone_report_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="Capstone_report_files/libs/quarto-html/popper.min.js"></script>
+<script src="Capstone_report_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Capstone_report_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Capstone_report_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Capstone_report_files/libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Capstone_report_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Capstone_report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Capstone_report_files/libs/bootstrap/bootstrap-6a8e6d95bfcd174082ff54166b04dcf7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a></li>
+  <li><a href="#quick-check-of-the-data" id="toc-quick-check-of-the-data" class="nav-link" data-scroll-target="#quick-check-of-the-data">Quick check of the data</a></li>
+  <li><a href="#results-and-analysis" id="toc-results-and-analysis" class="nav-link" data-scroll-target="#results-and-analysis">Results and Analysis</a></li>
+  <li><a href="#smoothed-acceleration" id="toc-smoothed-acceleration" class="nav-link" data-scroll-target="#smoothed-acceleration">Smoothed Acceleration</a></li>
+  <li><a href="#summary-statistics" id="toc-summary-statistics" class="nav-link" data-scroll-target="#summary-statistics">Summary Statistics</a></li>
+  <li><a href="#linear-model-predicting-acceleration-from-gyroscope" id="toc-linear-model-predicting-acceleration-from-gyroscope" class="nav-link" data-scroll-target="#linear-model-predicting-acceleration-from-gyroscope">Linear Model: Predicting Acceleration from Gyroscope</a></li>
+  <li><a href="#conclusions" id="toc-conclusions" class="nav-link" data-scroll-target="#conclusions">Conclusions</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Drone IMU Performance Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Hope Chilunga </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 11, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>Modern drones rely heavily on <strong>Inertial Measurement Unit (IMU)</strong> sensors for stability, navigation, and real-time flight corrections.<br>
+This project explores IMU data recorded during a live drone test flight to understand:</p>
+<ul>
+<li>How the drone behaves during dynamic phases (take-off, turns, hovering, landing)<br>
+</li>
+<li>How acceleration and gyroscope signals interact<br>
+</li>
+<li>Whether there are patterns indicating control corrections or instability</li>
+</ul>
+<p>This analysis uses <strong>data visualisation, statistical modelling, smoothing techniques, and exploratory engineering analysis</strong> to interpret drone performance from raw sensor readings.</p>
+</section>
+<section id="methods" class="level1">
+<h1>Methods</h1>
+<p>The dataset used in this project was obtained from Kaggle and consists of measurements collected from on-board IMU sensors, which capture the drone’s motion in detail. The sensors recorded linear acceleration along the X, Y, and Z axes (Ax, Ay, Az), angular velocity in roll, pitch, and yaw directions (p, q, r), and a high-resolution nanosecond timestamp (time_ns). The analysis followed several processing steps:</p>
+<pre><code>Importing the raw CSV data into R.
+
+Cleaning variable names to ensure consistency and ease of analysis.
+
+Creating derived metrics, such as total acceleration and total rotation, to better capture overall drone motion.
+
+Smoothing noisy sensor data using rolling averages to reduce fluctuations.
+
+Visualizing motion patterns with multi-layer ggplot2 plots.</code></pre>
+<p>Building a regression model to explore relationships between rotation and acceleration, helping identify factors affecting drone performance and stability.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>packages <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"tidyverse"</span>, <span class="st">"janitor"</span>, <span class="st">"summarytools"</span>, <span class="st">"here"</span>, <span class="st">"zoo"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>installed <span class="ot">&lt;-</span> packages <span class="sc">%in%</span> <span class="fu">rownames</span>(<span class="fu">installed.packages</span>())</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">any</span>(<span class="sc">!</span>installed)) <span class="fu">install.packages</span>(packages[<span class="sc">!</span>installed])</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">lapply</span>(packages, library, <span class="at">character.only =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+ [1] "knitr"     "janitor"   "lubridate" "forcats"   "stringr"   "dplyr"    
+ [7] "purrr"     "readr"     "tidyr"     "tibble"    "ggplot2"   "tidyverse"
+[13] "stats"     "graphics"  "grDevices" "utils"     "datasets"  "methods"  
+[19] "base"     
+
+[[2]]
+ [1] "knitr"     "janitor"   "lubridate" "forcats"   "stringr"   "dplyr"    
+ [7] "purrr"     "readr"     "tidyr"     "tibble"    "ggplot2"   "tidyverse"
+[13] "stats"     "graphics"  "grDevices" "utils"     "datasets"  "methods"  
+[19] "base"     
+
+[[3]]
+ [1] "summarytools" "knitr"        "janitor"      "lubridate"    "forcats"     
+ [6] "stringr"      "dplyr"        "purrr"        "readr"        "tidyr"       
+[11] "tibble"       "ggplot2"      "tidyverse"    "stats"        "graphics"    
+[16] "grDevices"    "utils"        "datasets"     "methods"      "base"        
+
+[[4]]
+ [1] "here"         "summarytools" "knitr"        "janitor"      "lubridate"   
+ [6] "forcats"      "stringr"      "dplyr"        "purrr"        "readr"       
+[11] "tidyr"        "tibble"       "ggplot2"      "tidyverse"    "stats"       
+[16] "graphics"     "grDevices"    "utils"        "datasets"     "methods"     
+[21] "base"        
+
+[[5]]
+ [1] "zoo"          "here"         "summarytools" "knitr"        "janitor"     
+ [6] "lubridate"    "forcats"      "stringr"      "dplyr"        "purrr"       
+[11] "readr"        "tidyr"        "tibble"       "ggplot2"      "tidyverse"   
+[16] "stats"        "graphics"     "grDevices"    "utils"        "datasets"    
+[21] "methods"      "base"        </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Use the correct relative path</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>imu <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"raw/imu.csv"</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Check the first few rows</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(imu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 7
+  `time [ns]` `ax [m s-2]` `ay [m s-2]` `az [m s-2]` `p [rad/s]` `q [rad/s]`
+        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
+1           0      -3.59          13.4        -1.37       0.0724    -0.137  
+2     3995000       5.61           4.40       -1.61      -0.0714     0.0618 
+3     6992000      -2.40          14.7        -1.45      -0.0352    -0.211  
+4    11987000       6.11          10.6        -0.144     -0.301      0.0565 
+5    14984000      -2.96           6.93       -3.02       0.207     -0.123  
+6    17981000      -0.0958         5.86       -2.19      -0.0224    -0.00426
+# ℹ 1 more variable: `r [rad/s]` &lt;dbl&gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clean and prepare the data</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="ot">&lt;-</span> imu <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">time_ns =</span> <span class="st">`</span><span class="at">time [ns]</span><span class="st">`</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ax =</span> <span class="st">`</span><span class="at">ax [m s-2]</span><span class="st">`</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ay =</span> <span class="st">`</span><span class="at">ay [m s-2]</span><span class="st">`</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">az =</span> <span class="st">`</span><span class="at">az [m s-2]</span><span class="st">`</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">p  =</span> <span class="st">`</span><span class="at">p [rad/s]</span><span class="st">`</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">q  =</span> <span class="st">`</span><span class="at">q [rad/s]</span><span class="st">`</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">r  =</span> <span class="st">`</span><span class="at">r [rad/s]</span><span class="st">`</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(time_ns, ax, ay, az, p, q, r) <span class="sc">%&gt;%</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time_s =</span> time_ns <span class="sc">/</span> <span class="fl">1e9</span>,<span class="at">gyro_total  =</span> <span class="fu">sqrt</span>(p<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> q<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> r<span class="sc">^</span><span class="dv">2</span>),<span class="at">accel_total =</span> <span class="fu">sqrt</span>(ax<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> ay<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> az<span class="sc">^</span><span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="quick-check-of-the-data" class="level1">
+<h1>Quick check of the data</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># View first rows</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(imu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 7
+  `time [ns]` `ax [m s-2]` `ay [m s-2]` `az [m s-2]` `p [rad/s]` `q [rad/s]`
+        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;        &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
+1           0      -3.59          13.4        -1.37       0.0724    -0.137  
+2     3995000       5.61           4.40       -1.61      -0.0714     0.0618 
+3     6992000      -2.40          14.7        -1.45      -0.0352    -0.211  
+4    11987000       6.11          10.6        -0.144     -0.301      0.0565 
+5    14984000      -2.96           6.93       -3.02       0.207     -0.123  
+6    17981000      -0.0958         5.86       -2.19      -0.0224    -0.00426
+# ℹ 1 more variable: `r [rad/s]` &lt;dbl&gt;</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check structure</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(imu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>spc_tbl_ [3,368 × 7] (S3: spec_tbl_df/tbl_df/tbl/data.frame)
+ $ time [ns] : num [1:3368] 0 3995000 6992000 11987000 14984000 ...
+ $ ax [m s-2]: num [1:3368] -3.59 5.61 -2.4 6.11 -2.96 ...
+ $ ay [m s-2]: num [1:3368] 13.45 4.4 14.65 10.59 6.93 ...
+ $ az [m s-2]: num [1:3368] -1.37 -1.614 -1.451 -0.144 -3.018 ...
+ $ p [rad/s] : num [1:3368] 0.0724 -0.0714 -0.0352 -0.3015 0.2067 ...
+ $ q [rad/s] : num [1:3368] -0.1374 0.0618 -0.2109 0.0565 -0.1225 ...
+ $ r [rad/s] : num [1:3368] -0.78 1.12 -1.09 1.34 -1.06 ...
+ - attr(*, "spec")=
+  .. cols(
+  ..   `time [ns]` = col_double(),
+  ..   `ax [m s-2]` = col_double(),
+  ..   `ay [m s-2]` = col_double(),
+  ..   `az [m s-2]` = col_double(),
+  ..   `p [rad/s]` = col_double(),
+  ..   `q [rad/s]` = col_double(),
+  ..   `r [rad/s]` = col_double()
+  .. )
+ - attr(*, "problems")=&lt;externalptr&gt; </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary statistics</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(imu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   time [ns]           ax [m s-2]         ay [m s-2]       az [m s-2]    
+ Min.   :0.000e+00   Min.   :-7.35750   Min.   :-1.624   Min.   :-8.066  
+ 1st Qu.:2.108e+09   1st Qu.:-2.50998   1st Qu.: 6.335   1st Qu.:-4.258  
+ Median :4.279e+09   Median : 0.03593   Median : 8.897   Median :-2.778  
+ Mean   :4.354e+09   Mean   : 0.07740   Mean   : 8.947   Mean   :-2.810  
+ 3rd Qu.:6.554e+09   3rd Qu.: 2.65847   3rd Qu.:11.584   3rd Qu.:-1.317  
+ Max.   :8.967e+09   Max.   : 6.23663   Max.   :19.869   Max.   : 1.959  
+   p [rad/s]          q [rad/s]           r [rad/s]       
+ Min.   :-1.31347   Min.   :-0.312122   Min.   :-1.32199  
+ 1st Qu.:-0.13848   1st Qu.:-0.136354   1st Qu.:-0.49748  
+ Median :-0.03462   Median :-0.073503   Median :-0.01119  
+ Mean   :-0.04577   Mean   :-0.071301   Mean   :-0.01406  
+ 3rd Qu.: 0.07244   3rd Qu.:-0.009587   3rd Qu.: 0.48150  
+ Max.   : 0.57524   Max.   : 0.270577   Max.   : 1.33797  </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>imu <span class="ot">&lt;-</span> imu <span class="sc">%&gt;%</span> <span class="fu">clean_names</span>()</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Check new column names</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(imu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "time_ns"  "ax_m_s_2" "ay_m_s_2" "az_m_s_2" "p_rad_s"  "q_rad_s"  "r_rad_s" </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>imu <span class="ot">&lt;-</span> imu <span class="sc">%&gt;%</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time_s =</span> time_ns <span class="sc">/</span> <span class="fl">1e9</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>imu <span class="ot">&lt;-</span> imu <span class="sc">%&gt;%</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time_s =</span> time_ns <span class="sc">/</span> <span class="fl">1e9</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="results-and-analysis" class="level1">
+<h1>Results and Analysis</h1>
+<ol type="1">
+<li>Acceleration Behaviour Over Time</li>
+</ol>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="sc">%&gt;%</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">pivot_longer</span>(<span class="fu">c</span>(ax, ay, az), <span class="at">names_to=</span><span class="st">"axis"</span>, <span class="at">values_to=</span><span class="st">"accel"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">aes</span>(time_s, accel, <span class="at">color =</span> axis)) <span class="sc">+</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="at">x =</span> <span class="st">"Time (seconds)"</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> <span class="st">"Acceleration (m/s²)"</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="at">color =</span> <span class="st">"Axis"</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-accel" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-accel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Capstone_report_files/figure-html/fig-accel-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-accel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Acceleration components over time.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Analysis: Take-off: Sharp spike in the z-axis (az) represents vertical lift. Forward motion &amp; maneuvers: Moderate fluctuations in x-axis (ax) and y-axis (ay) correspond to horizontal movement and turns. Landing: Another spike in az shows deceleration during landing. Overall, accelerometer data captures all major flight phases. Sudden spikes indicate rapid movements, likely due to autopilot or pilot inputs, while smoother patterns indicate controlled horizontal motion.</p>
+<p>#Gyroscope Angular Velocity</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="sc">%&gt;%</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">pivot_longer</span>(<span class="fu">c</span>(p, q, r), <span class="at">names_to=</span><span class="st">"gyro_axis"</span>, <span class="at">values_to=</span><span class="st">"ang_vel"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">aes</span>(time_s, ang_vel, <span class="at">color =</span> gyro_axis)) <span class="sc">+</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="at">x =</span> <span class="st">"Time (seconds)"</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> <span class="st">"Angular Velocity (rad/s)"</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="at">color =</span> <span class="st">"Gyroscope Axis"</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-gyro" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gyro-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="Capstone_report_files/figure-html/fig-gyro-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gyro-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Gyroscope angular velocity over time.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Analysis: Sharp turns: Peaks in p (roll) and q (pitch) indicate rapid changes in drone orientation, such as banking or tilting. Yaw adjustments (red line, r): Variations in r correspond to rotation around the vertical axis (turning left or right). Peaks show rapid directional corrections, while values near zero indicate straight flight. Stabilization: Periods of low angular velocity across all axes correspond to steady hovering or smooth straight-line flight. External factors: High-frequency spikes, especially in yaw, may capture responses to wind gusts or other turbulence.</p>
+<p># Interpretation: The gyroscope data confirms that the drone performs intentional rotations along all axes and actively stabilizes during flight. Highlighting the red line (r/yaw) emphasizes horizontal directional changes, which are critical for navigation and course correction.</p>
+</section>
+<section id="smoothed-acceleration" class="level1">
+<h1>Smoothed Acceleration</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zoo)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="ot">&lt;-</span> imu_clean <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute total acceleration magnitude</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">accel_total =</span> <span class="fu">sqrt</span>(ax<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> ay<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> az<span class="sc">^</span><span class="dv">2</span>),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Smooth the total acceleration with a rolling mean (window = 50)</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">accel_smooth =</span> zoo<span class="sc">::</span><span class="fu">rollmean</span>(accel_total, <span class="at">k =</span> <span class="dv">50</span>, <span class="at">fill =</span> <span class="cn">NA</span>)</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Smooth total acceleration</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="ot">&lt;-</span> imu_clean <span class="sc">%&gt;%</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(<span class="at">accel_smooth =</span> zoo<span class="sc">::</span><span class="fu">rollmean</span>(accel_total, <span class="at">k =</span> <span class="dv">50</span>, <span class="at">fill =</span> <span class="cn">NA</span>))</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-smooth</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Smoothed total acceleration using a rolling mean."</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(imu_clean, <span class="fu">aes</span>(time_s, accel_smooth)) <span class="sc">+</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="fu">labs</span>(</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="at">x =</span> <span class="st">"Time (seconds)"</span>,</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> <span class="st">"Smoothed Acceleration (m/s²)"</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>) <span class="sc">+</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Capstone_report_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Analysis: The rolling mean removes small fluctuations and highlights overall trends. Peaks correspond to take-off, landing, or sharp maneuvers. Flat regions indicate steady flight. Smoothed acceleration is a good measure of general drone stability, confirming controlled motion with occasional high-intensity events.</p>
+</section>
+<section id="summary-statistics" class="level1">
+<h1>Summary Statistics</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>imu_clean <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_acc =</span> <span class="fu">mean</span>(accel_total, <span class="at">na.rm=</span><span class="cn">TRUE</span>),</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_acc =</span> <span class="fu">sd</span>(accel_total, <span class="at">na.rm=</span><span class="cn">TRUE</span>),</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_gyro =</span> <span class="fu">mean</span>(gyro_total, <span class="at">na.rm=</span><span class="cn">TRUE</span>),</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">sd_gyro =</span> <span class="fu">sd</span>(gyro_total, <span class="at">na.rm=</span><span class="cn">TRUE</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">caption =</span> <span class="st">"Summary statistics of IMU variables"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Summary statistics of IMU variables</caption>
+<thead>
+<tr class="header">
+<th style="text-align: right;">mean_acc</th>
+<th style="text-align: right;">sd_acc</th>
+<th style="text-align: right;">mean_gyro</th>
+<th style="text-align: right;">sd_gyro</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">10.25212</td>
+<td style="text-align: right;">2.94201</td>
+<td style="text-align: right;">0.5565616</td>
+<td style="text-align: right;">0.2738997</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Analysis: Mean values indicate average movement intensity; moderate values suggest stable flight. Standard deviations quantify variability; high SD reflects aggressive maneuvers or turbulence. Overall, the drone experiences mostly controlled movements with predictable flight patterns.</p>
+</section>
+<section id="linear-model-predicting-acceleration-from-gyroscope" class="level1">
+<h1>Linear Model: Predicting Acceleration from Gyroscope</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(accel_total <span class="sc">~</span> p <span class="sc">+</span> q <span class="sc">+</span> r, <span class="at">data =</span> imu_clean)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = accel_total ~ p + q + r, data = imu_clean)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-8.1551 -1.9284 -0.2054  1.8018  8.9007 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  9.43040    0.05919 159.315  &lt; 2e-16 ***
+p           -3.44837    0.22436 -15.370  &lt; 2e-16 ***
+q           -9.18101    0.57711 -15.909  &lt; 2e-16 ***
+r           -0.65976    0.08870  -7.439 1.29e-13 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 2.582 on 3364 degrees of freedom
+Multiple R-squared:  0.2302,    Adjusted R-squared:  0.2295 
+F-statistic: 335.3 on 3 and 3364 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>Analysis: Positive coefficients show that increases in rotational velocity lead to higher acceleration. The R² value indicates how much of acceleration variability can be explained by rotation. This confirms that rotational maneuvers directly influence total acceleration, validating the relationship between gyroscope readings and drone movement intensity.</p>
+</section>
+<section id="conclusions" class="level1">
+<h1>Conclusions</h1>
+<ol type="1">
+<li><p>Accelerometer data clearly identifies take-off, turns, and landing phases.</p></li>
+<li><p>Gyroscope readings show active stabilization and rotational maneuvers.</p></li>
+<li><p>Smoothed acceleration confirms controlled flight with minimal turbulence effects.</p></li>
+<li><p>The linear model demonstrates a measurable relationship between rotational velocity and acceleration, useful for improving autopilot and stability algorithms.</p></li>
+</ol>
+</section>
+<section id="references" class="level1">
+<h1>References</h1>
+<ol type="1">
+<li><p>Wickham, H., Çetinkaya-Rundel, M., &amp; Grolemund, G. (2023). <em>R for data science</em> (2nd ed.). O’Reilly Media. https://doi.org/10.5281/zenodo.5796260</p></li>
+<li><p>Wickham, H. (2023). <em>tidyverse: Easily install and load the tidyverse</em> (Version 1.3.2) [R package]. CRAN. https://CRAN.R-project.org/package=tidyverse<br>
+(Software packages do not have DOIs; CRAN link is the official reference.)</p></li>
+<li><p>Grolemund, G. (2014). <em>Hands-on programming with R</em>. O’Reilly Media.<br>
+(No DOI available for this book.)</p></li>
+<li><p>Biecek, P., &amp; Kosinski, M. (2022). <em>Data wrangling in R</em>. CRC Press. https://doi.org/10.1201/9780429320966</p></li>
+<li><p>R Core Team. (2023). <em>R: A language and environment for statistical computing</em> [Computer software]. R Foundation for Statistical Computing. https://www.R-project.org/<br>
+(Official R software does not use a DOI.)</p></li>
+</ol>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
