@@ -1,0 +1,6 @@
+variable_name,description
+time [ns],Timestamp of the measurement in nanoseconds.
+ax [m s-2],Acceleration along the X-axis measured in meters per second squared.
+ay [m s-2],Acceleration along the Y-axis measured in meters per second squared.
+az [m s-2],Acceleration along the Z-axis measured in meters per second squared.
+p [rad/s],Angular velocity around the X-axis (roll rate) measured in radians per second.
